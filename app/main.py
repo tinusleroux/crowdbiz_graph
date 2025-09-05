@@ -5,7 +5,11 @@ Orchestrates the entire CrowdBiz Graph application
 
 import streamlit as st
 import sys
+import os
 from datetime import datetime
+
+# Add the parent directory to Python path for proper imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import UI components
 from app.ui.components.sidebar import render_sidebar

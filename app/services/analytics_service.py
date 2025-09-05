@@ -60,14 +60,14 @@ class AnalyticsService:
         
         try:
             # Get all organizations
-            organizations = get_table_data('organizations', limit=1000)
+            organizations = get_table_data('organization', limit=1000)
             
             if not organizations:
                 return {
                     'total_organizations': 0,
-                    'league_breakdown': [],
-                    'geographic_breakdown': [],
-                    'establishment_timeline': []
+                    'org_type_breakdown': [],
+                    'by_sport': [],
+                    'top_organizations': []
                 }
             
             # Convert to DataFrame for easier analysis
@@ -267,8 +267,8 @@ class AnalyticsService:
         
         try:
             # Get all data
-            people = get_table_data('people', limit=1000)
-            organizations = get_table_data('organizations', limit=1000)
+            people = get_table_data('person', limit=1000)
+            organizations = get_table_data('organization', limit=1000)
             
             # Organization connectivity (how many people per organization)
             org_connectivity = defaultdict(int)
@@ -320,7 +320,7 @@ class AnalyticsService:
     def _get_top_organizations(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get top organizations by people count"""
         try:
-            people = get_table_data('people', limit=1000)
+            people = get_table_data('person', limit=1000)
             org_counts = defaultdict(int)
             
             for person in people:
@@ -339,8 +339,8 @@ class AnalyticsService:
     def _get_recent_additions(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recently added people and organizations"""
         try:
-            recent_people = get_table_data('people', limit=limit, filters={})
-            recent_orgs = get_table_data('organizations', limit=limit, filters={})
+            recent_people = get_table_data('person', limit=limit, filters={})
+            recent_orgs = get_table_data('organization', limit=limit, filters={})
             
             # Combine and sort by creation date if available
             recent = []

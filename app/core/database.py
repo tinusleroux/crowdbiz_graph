@@ -109,18 +109,8 @@ class DatabaseManager:
             return []
         
         try:
-            # Search across multiple fields
-            result = self.client.rpc('search_people', {
-                'search_query': query,
-                'result_limit': limit,
-                'result_offset': offset
-            }).execute()
-            
-            if result.data:
-                return result.data
-            
-            # Fallback to simple text search if RPC not available
-            people_query = self.client.table('people').select('*')
+            # Use simple text search across name fields
+            people_query = self.client.table('person').select('*')
             people_query = people_query.or_(
                 f"full_name.ilike.%{query}%,"
                 f"first_name.ilike.%{query}%,"
@@ -140,12 +130,11 @@ class DatabaseManager:
             return []
         
         try:
-            org_query = self.client.table('organizations').select('*')
+            org_query = self.client.table('organization').select('*')
             org_query = org_query.or_(
                 f"name.ilike.%{query}%,"
-                f"league.ilike.%{query}%,"
-                f"city.ilike.%{query}%,"
-                f"state.ilike.%{query}%"
+                f"org_type.ilike.%{query}%,"
+                f"sport.ilike.%{query}%"
             )
             result = org_query.limit(limit).offset(offset).execute()
             
@@ -164,23 +153,23 @@ class DatabaseManager:
             stats = {}
             
             # Count people
-            people_count = self.safe_query('people', 'count')
+            people_count = self.safe_query('person', 'count')
             stats['total_people'] = people_count or 0
             
             # Count organizations
-            org_count = self.safe_query('organizations', 'count')
+            org_count = self.safe_query('organization', 'count')
             stats['total_organizations'] = org_count or 0
             
-            # Get league breakdown
-            leagues = self.safe_query('organizations', 'select')
-            if leagues:
-                league_counts = {}
-                for org in leagues:
-                    league = org.get('league', 'Unknown')
-                    league_counts[league] = league_counts.get(league, 0) + 1
-                stats['league_breakdown'] = [
-                    {'league': k, 'count': v} 
-                    for k, v in league_counts.items()
+            # Get organization type breakdown
+            orgs = self.safe_query('organization', 'select')
+            if orgs:
+                org_type_counts = {}
+                for org in orgs:
+                    org_type = org.get('org_type', 'Unknown')
+                    org_type_counts[org_type] = org_type_counts.get(org_type, 0) + 1
+                stats['org_type_breakdown'] = [
+                    {'org_type': k, 'count': v} 
+                    for k, v in org_type_counts.items()
                 ]
             
             return stats

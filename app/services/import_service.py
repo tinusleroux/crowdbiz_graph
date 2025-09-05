@@ -157,7 +157,7 @@ class ImportService:
                         results['errors'].append(f"Failed to update contact: {contact_data['full_name']}")
                 else:
                     # Insert new contact
-                    if insert_data('people', contact_data):
+                    if insert_data('person', contact_data):
                         results['imported'] += 1
                         logger.debug(f"Imported contact: {contact_data['full_name']}")
                     else:
@@ -173,7 +173,7 @@ class ImportService:
         """Find existing contact by name"""
         try:
             results = self.db_manager.safe_query(
-                'people',
+                'person',
                 'select',
                 filters={'full_name': full_name},
                 limit=1
@@ -202,7 +202,7 @@ class ImportService:
         """Update existing contact in database"""
         try:
             result = self.db_manager.safe_query(
-                'people',
+                'person',
                 'update',
                 data=data,
                 filters={'id': contact_id}

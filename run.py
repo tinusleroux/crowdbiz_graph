@@ -37,8 +37,11 @@ def main():
     
     try:
         if command == "streamlit":
-            # Start the main Streamlit application
-            subprocess.run(["streamlit", "run", "app/main.py", "--server.port=8501"])
+            # Start the main Streamlit application with proper Python path
+            import os
+            env = os.environ.copy()
+            env['PYTHONPATH'] = os.getcwd()
+            subprocess.run(["streamlit", "run", "app/main.py", "--server.port=8501"], env=env)
             
         elif command == "api":
             # Start the optional FastAPI service

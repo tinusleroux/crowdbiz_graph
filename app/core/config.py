@@ -22,11 +22,11 @@ class DatabaseConfig:
     
     @classmethod
     def from_env(cls) -> 'DatabaseConfig':
-        # Try to use the PostgreSQL URL first, fallback to Supabase URL
+        # Use Supabase REST API URL for the Python client, fallback to PostgreSQL URL
         db_url = (
+            os.getenv('SUPABASE_URL') or
             os.getenv('SUPABASE_DB_URL') or 
-            os.getenv('DATABASE_URL') or 
-            os.getenv('SUPABASE_URL', '')
+            os.getenv('DATABASE_URL', '')
         )
         
         return cls(
