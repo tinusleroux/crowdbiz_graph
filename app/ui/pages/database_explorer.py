@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-from ...core.database import get_table_data, get_database_manager
+from ...core.database import get_table_data, get_database_manager, get_enriched_people_data, get_enriched_organization_data
 from ...core.logger import get_logger
 
 logger = get_logger("database_explorer_page")
@@ -18,19 +18,37 @@ def show_database_explorer():
     st.title("🗃️ Database Explorer")
     
     st.markdown("""
-    Explore your database tables directly. View, search, and export data from the CrowdBiz Graph database.
+    Explore your database with **enriched views** showing the relationships between people, organizations, and roles that make CrowdBiz Graph valuable.
     """)
     
-    # Table selector
-    st.markdown("### 📊 Select Table to Explore")
+    # View selector
+    st.markdown("### 📊 Select Data View")
     
-    tables = {
-        "People": "people",
-        "Organizations": "organizations"
+    views = {
+        "People (with Organizations & Roles)": "enriched_people", 
+        "Organizations (with People & Roles)": "enriched_organizations",
+        "Raw People Table": "person",
+        "Raw Organizations Table": "organization", 
+        "Roles Table": "role",
+        "Sources Table": "source"
     }
     
-    selected_table_name = st.selectbox("Select data to explore:", list(tables.keys()))
-    selected_table = tables[selected_table_name]
+    selected_view_name = st.selectbox("Select data to explore:", list(views.keys()))
+    selected_view = views[selected_view_name]
+    
+    # Show description of selected view
+    view_descriptions = {
+        "person": "� **Raw people data** - Individual profiles with personal information",
+        "organization": "🏢 **Raw organization data** - Teams, leagues, and companies in sports",
+        "role": "💼 **Raw role/position data** - Job positions and professional relationships",
+        "source": "� **Data source tracking** - Import sources and data provenance",
+        "v_role_current": "� **Current roles view** - Pre-computed current professional positions",
+        "enriched_people": "� **People with their organizations and job titles** - The core value of CrowdBiz Graph showing professional connections with executive indicators",
+        "enriched_organizations": "🏢 **Organizations with their people and roles** - Comprehensive organization profiles with employee counts, executive breakdowns, and active role summaries"
+    }
+    
+    if selected_view in view_descriptions:
+        st.info(view_descriptions[selected_view])
     
     # Query options
     st.markdown("### 🔧 Query Options")
@@ -49,22 +67,136 @@ def show_database_explorer():
     
     # Load and display data
     try:
-        with st.spinner(f"Loading {selected_table_name} data..."):
-            data = get_table_data(selected_table, limit=limit, offset=offset)
+        with st.spinner(f"Loading {selected_view_name} data..."):
+            # Use appropriate data loader based on view type
+            if selected_view == "enriched_people":
+                data = get_enriched_people_data(limit=limit, offset=offset)
+            elif selected_view == "enriched_organizations":
+                data = get_enriched_organization_data(limit=limit, offset=offset)
+            else:
+                # Raw table data
+                data = get_table_data(selected_view, limit=limit, offset=offset)
         
         if data:
-            display_table_data(data, selected_table_name, selected_table)
+            display_table_data(data, selected_view_name, selected_view)
         else:
-            st.info(f"No {selected_table_name.lower()} data found.")
+            st.info(f"No {selected_view_name.lower()} data found.")
     
     except Exception as e:
-        logger.error(f"Error loading {selected_table} data: {e}")
-        st.error(f"Error loading {selected_table_name} data: {e}")
+        logger.error(f"Error loading {selected_view} data: {e}")
+        st.error(f"Error loading {selected_view_name} data: {e}")
+
+def display_enriched_view_summary(df, table_name, table_id):
+    """Display special summary for enriched views highlighting key relationships"""
+    
+    if table_id == "enriched_people":
+        st.markdown("### 🔗 Professional Network Insights")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            people_with_orgs = len(df[df['organization'].notna()])
+            st.metric("👥 People with Organizations", people_with_orgs)
+        
+        with col2:
+            executives = len(df[df.get('is_executive', False) == True])
+            st.metric("⭐ Executives", executives)
+        
+        with col3:
+            people_with_titles = len(df[df['job_title'].notna()])
+            st.metric("🎯 People with Job Titles", people_with_titles)
+        
+        with col4:
+            avg_roles = df['current_roles_count'].mean() if 'current_roles_count' in df.columns else 0
+            st.metric("📊 Avg Current Roles", f"{avg_roles:.1f}")
+        
+        # Show top organizations and executive breakdown
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if 'organization' in df.columns and not df['organization'].isna().all():
+                st.markdown("**🏢 Top Organizations by People Count:**")
+                org_counts = df['organization'].value_counts().head(5)
+                for org, count in org_counts.items():
+                    if pd.notna(org):
+                        exec_count = len(df[(df['organization'] == org) & (df.get('is_executive', False) == True)])
+                        exec_indicator = f" (⭐ {exec_count} execs)" if exec_count > 0 else ""
+                        st.write(f"• **{org}**: {count} people{exec_indicator}")
+        
+        with col2:
+            if 'industry' in df.columns and not df['industry'].isna().all():
+                st.markdown("**🏭 Top Industries:**")
+                industry_counts = df['industry'].value_counts().head(5)
+                for industry, count in industry_counts.items():
+                    if pd.notna(industry):
+                        st.write(f"• **{industry}**: {count} people")
+    
+    elif table_id == "enriched_organizations":
+        st.markdown("### 🏢 Organization Network Insights")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            total_people = df['current_people_count'].sum() if 'current_people_count' in df.columns else 0
+            st.metric("👥 Total People", total_people)
+        
+        with col2:
+            total_execs = df['executive_count'].sum() if 'executive_count' in df.columns else 0
+            st.metric("⭐ Total Executives", total_execs)
+        
+        with col3:
+            avg_people = df['current_people_count'].mean() if 'current_people_count' in df.columns else 0
+            st.metric("📊 Avg People/Org", f"{avg_people:.1f}")
+        
+        with col4:
+            orgs_with_people = len(df[df['current_people_count'] > 0]) if 'current_people_count' in df.columns else 0
+            st.metric("🏢 Active Organizations", orgs_with_people)
+        
+        # Show largest organizations with executive breakdown
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if 'current_people_count' in df.columns:
+                st.markdown("**👥 Largest Organizations:**")
+                top_orgs = df.nlargest(5, 'current_people_count')[['name', 'current_people_count', 'executive_count', 'org_type']]
+                for _, org in top_orgs.iterrows():
+                    if org['current_people_count'] > 0:
+                        org_type = f" ({org['org_type']})" if pd.notna(org['org_type']) else ""
+                        exec_info = f" (⭐ {org.get('executive_count', 0)} execs)" if org.get('executive_count', 0) > 0 else ""
+                        st.write(f"• **{org['name']}**{org_type}: {org['current_people_count']} people{exec_info}")
+        
+        with col2:
+            if 'executive_count' in df.columns:
+                st.markdown("**⭐ Organizations with Most Executives:**")
+                exec_orgs = df[df['executive_count'] > 0].nlargest(5, 'executive_count')[['name', 'executive_count', 'current_people_count']]
+                for _, org in exec_orgs.iterrows():
+                    total = org.get('current_people_count', 0)
+                    execs = org.get('executive_count', 0)
+                    ratio = f" ({execs}/{total})" if total > 0 else ""
+                    st.write(f"• **{org['name']}**: ⭐ {execs} executives{ratio}")
+
+def reorder_dataframe_columns(df, priority_cols):
+    """Reorder dataframe columns to show priority columns first"""
+    if df.empty:
+        return df
+    
+    # Get existing columns that are in priority list
+    existing_priority = [col for col in priority_cols if col in df.columns]
+    
+    # Get remaining columns not in priority list
+    remaining_cols = [col for col in df.columns if col not in priority_cols]
+    
+    # Combine them
+    new_order = existing_priority + remaining_cols
+    
+    return df[new_order]
 
 def display_table_data(data, table_name, table_id):
     """Display table data with statistics and export options"""
     
     df = pd.DataFrame(data)
+    
+    # Special handling for enriched views
+    if "enriched" in table_id:
+        display_enriched_view_summary(df, table_name, table_id)
     
     # Data summary
     st.markdown(f"### 📋 {table_name} Data ({len(df)} records)")
@@ -119,6 +251,15 @@ def display_table_data(data, table_name, table_id):
     
     # Display data
     st.markdown("### 📑 Data Table")
+    
+    # Reorder columns for enriched views to show most important first
+    if table_id == "enriched_people":
+        priority_cols = ['full_name', 'job_title', 'organization', 'is_executive', 'org_type', 'sport', 'industry', 'department', 'current_roles_count', 'start_date']
+        display_df = reorder_dataframe_columns(display_df, priority_cols)
+    elif table_id == "enriched_organizations": 
+        priority_cols = ['name', 'current_people_count', 'executive_count', 'non_executive_count', 'org_type', 'sport', 'industry', 'is_active', 'active_job_titles', 'key_people']
+        display_df = reorder_dataframe_columns(display_df, priority_cols)
+    
     st.dataframe(display_df, use_container_width=True)
     
     # Export options

@@ -19,7 +19,10 @@ Visit http://localhost:8502
 ## 📚 Documentation
 
 - **[📖 Documentation Hub](docs/README.md)** - Complete documentation
+- **[🏗️ Data Model Architecture](docs/architecture/data-model-architecture.md)** - Database design and concepts
+- **[🗄️ Database Schema](docs/architecture/database-schema-UPDATED.md)** - Detailed schema reference
 - **[🤖 AI Development Guide](.github/copilot-instructions.md)** - For AI coding agents
+- **[🔌 Database Connection Guide](docs/development/DATABASE_CONNECTION_GUIDE.md)** - Connection patterns
 - **[🔒 Privacy & Compliance](docs/user-guide/overview.md)** - User guide and privacy
 
 ## 🎯 What We Track ✅ / Don't Store ❌

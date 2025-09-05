@@ -38,11 +38,36 @@ SUPABASE_DATABASE_PASSWORD=optional-for-direct-sql
 -- Primary tables
 person (id, full_name, first_name, last_name, linkedin_url, created_at, updated_at)
 organization (id, name, org_type, sport, parent_org_id) 
-role (id, person_id, org_id, job_title, dept, start_date, end_date, source_id)
+role (id, person_id, org_id, job_title, start_date, end_date, source_id, is_current, is_executive)
 source (id, url, license, confidence, fetched_at, checksum_sha256)
+job_title_departments (id, job_title, standardized_department, created_at, updated_at)
 
--- Materialized view for current roles
-v_role_current (id, person_id, org_id, job_title, dept, start_date)
+-- Summary tables for performance
+network_status (person_id, full_name, current_job_title, current_organization, current_org_type, etc.)
+organization_summary (org_id, name, org_type, sport, current_employees, executive_count, etc.)
+```
+
+### Department Classification System
+```python
+# Job Title → Department Lookup (CORRECT APPROACH)
+def get_department_for_job_title(job_title: str) -> str:
+    result = db.client.table('job_title_departments')\
+        .select('standardized_department')\
+        .eq('job_title', job_title)\
+        .single().execute()
+    return result.data['standardized_department'] if result.data else 'Other'
+
+# 9 Standard Departments:
+# - Sales & Partnerships (262 job titles)
+# - Marketing & Communications (185 job titles)  
+# - Other (112 job titles)
+# - Technology & Analytics (50 job titles)
+# - Stadium Operations & Facilities (35 job titles)
+# - Finance & Administration (27 job titles)
+# - Executive Leadership (20 job titles)
+# - Fan Experience & Events (19 job titles)
+# - Broadcasting & Media (7 job titles)
+# - Ticketing & Operations (5 job titles)
 ```
 
 ### Database Connection Pattern
@@ -58,6 +83,15 @@ db = get_db()
 results = db.safe_query("person", "select", 
                        filters={"full_name": search_term},
                        limit=100)
+
+# Department lookup pattern
+@st.cache_data(ttl=600)
+def get_department_for_job_title(job_title: str) -> str:
+    db = get_database_manager()
+    result = db.client.table('job_title_departments')\
+        .select('standardized_department')\
+        .eq('job_title', job_title).single().execute()
+    return result.data['standardized_department'] if result.data else 'Other'
 ```
 
 ## 💾 Data Quality & Integrity

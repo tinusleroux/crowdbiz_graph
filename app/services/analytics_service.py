@@ -129,8 +129,8 @@ class AnalyticsService:
         logger.info("Generating people analytics")
         
         try:
-            # Get all people
-            people = get_table_data('people', limit=1000)
+            # Get all people data for analysis
+            people = get_table_data('person', limit=1000)
             
             if not people:
                 return {
@@ -206,7 +206,8 @@ class AnalyticsService:
             cutoff_date = datetime.now() - timedelta(days=days)
             
             # Get recent additions
-            recent_people = self._get_recent_data('people', cutoff_date)
+            # Get recent additions for each entity type
+            recent_people = self._get_recent_data('person', cutoff_date)
             recent_orgs = self._get_recent_data('organizations', cutoff_date)
             
             # Analyze growth trends
