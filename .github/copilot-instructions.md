@@ -1,7 +1,7 @@
 # GitHub Copilot Instructions for CrowdBiz Graph
 
 ## Project Overview
-CrowdBiz Graph is a **privacy-first sports industry professional network** built with Streamlit and Supabase. It maps 2,990+ NFL professionals across 33 teams without storing private contact data (no emails, phones, addresses).
+CrowdBiz Graph is a **privacy-first sports industry professional network** built with Streamlit and Supabase. It maps NFL professionals across teams without storing private contact data (no emails, phones, addresses).
 
 ## Critical Architecture Decisions
 
@@ -50,7 +50,7 @@ dev_workspace/     # AI experimentation (gitignored)
 ## Development Workflow
 
 ### Before Changes
-1. Check `.ai_constraints/PRIVACY_RULES.md` and `ARCHITECTURE_RULES.md`
+1. Check `.ai_reference/ai_constraints/PRIVACY_RULES.md` and `ARCHITECTURE_RULES.md`
 2. Experiment in `dev_workspace/experiments/` first
 3. Run: `python .ai_checks/check_privacy_compliance.py`
 

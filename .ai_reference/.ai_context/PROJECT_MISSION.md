@@ -4,7 +4,7 @@
 **Build a privacy-first sports industry professional network** that enables meaningful connections without compromising personal privacy.
 
 ## 🏈 Primary Focus: NFL Ecosystem
-- **Current Data**: 2,990+ NFL professionals across 33 teams
+- **Current Data**: NFL professionals across teams
 - **Coverage**: Players, coaches, executives, staff, analysts, journalists
 - **Scope**: Comprehensive professional network mapping
 - **Growth**: Expanding to other sports leagues and industry sectors

@@ -46,9 +46,9 @@ app/
 ## 🔄 Development Workflow
 
 ### **Before Making Changes:**
-1. Read relevant `.ai_constraints/` files for rules
-2. Check `.ai_context/` files for business understanding  
-3. Look at `.ai_templates/` for code patterns
+1. Read relevant `.ai_reference/ai_constraints/` files for rules
+2. Check `.ai_reference/ai_context/` files for business understanding  
+3. Look at `.ai_reference/ai_templates/` for code patterns
 4. Test approach in `dev_workspace/` first
 
 ### **Making Changes:**
@@ -112,7 +112,7 @@ cd ../../app/
 ## 📊 Current System Status
 
 ### **Database:**
-- **Supabase PostgreSQL** with 2,990+ NFL professionals
+- **Supabase PostgreSQL** with NFL professional data
 - **33 NFL teams** with complete organizational data
 - **1,000+ professional roles** across the industry
 - **Privacy-compliant schema** (no personal contact data)
@@ -162,13 +162,13 @@ cd ../../app/
 ## 💡 Pro Tips for AI Agents
 
 ### **Understanding the Codebase:**
-- Start with this README and `.ai_context/` files
+- Start with this README and `.ai_reference/ai_context/` files
 - Look at existing patterns in `app/` before creating new code
 - Use `.ai_templates/` as starting points for new files
 - Keep experimental code in `dev_workspace/` until proven
 
 ### **Staying Aligned:**
-- Reference `.ai_constraints/` files frequently
+- Reference `.ai_reference/ai_constraints/` files frequently
 - When unsure, choose the more privacy-protective option
 - Keep the Streamlit app simple and user-friendly
 - Focus on professional networking value, not feature complexity
