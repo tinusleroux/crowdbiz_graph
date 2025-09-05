@@ -286,4 +286,4 @@ tests/
 **Last Review**: September 2025  
 **Next Evolution**: Advanced relationship analytics
 
-For detailed implementation guidance, see [AI Development Guide](../../AI_AGENT_README.md) or [Database Schema](database-schema.md).
+For detailed implementation guidance, see [AI Development Guide](../../.github/copilot-instructions.md) or [Database Schema](database-schema.md).

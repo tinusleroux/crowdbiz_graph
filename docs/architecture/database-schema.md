@@ -225,4 +225,4 @@ def safe_query(sql, params=None):
 **Last Migration**: June 2025  
 **Next Review**: December 2025
 
-For development questions, see [Architecture Overview](overview.md) or [AI Development Guide](../../AI_AGENT_README.md).
+For development questions, see [Architecture Overview](overview.md) or [AI Development Guide](../../.github/copilot-instructions.md).

@@ -1,117 +1,220 @@
+````instructions
 # GitHub Copilot Instructions for CrowdBiz Graph
 
-## Project Overview
-CrowdBiz Graph is a **privacy-first sports industry professional network** built with Streamlit and Supabase. It maps NFL professionals across teams without storing private contact data (no emails, phones, addresses).
+## 🎯 Project Mission
+CrowdBiz Graph is a **privacy-first sports industry professional network** that maps NFL professionals across teams without storing private contact data. We connect professionals through public information only - no emails, phones, or addresses ever stored.
 
-## Critical Architecture Decisions
+**Core Purpose**: Enable meaningful professional connections while respecting privacy completely.
 
-### Streamlit-First Design
-- **Direct UI**: This is a Streamlit app, not React/Next.js - use Streamlit components and patterns
+## 🚨 CRITICAL PRIVACY RULES - NEVER VIOLATE
+
+### ❌ Forbidden Data (Zero Tolerance)
+- **NEVER store**: email, phone, address, salary, personal_notes, private_contact_info
+- **NEVER accept**: private contact information during imports
+- **NEVER create**: database fields that could store private data  
+- **NEVER display**: private information even if it exists in source data
+- **NEVER bypass**: privacy filtering anywhere in the codebase
+
+### ✅ Allowed Professional Data Only
+- Names, titles, organizations, industry roles
+- Professional work history and achievements
+- Public social media profiles (LinkedIn URLs)
+- Professional skills and expertise areas
+- Team affiliations and professional networks
+
+### 🛡️ Required Privacy Patterns
+```python
+# ALWAYS filter before storage
+from app.core.privacy import sanitize_data_for_storage
+clean_data = sanitize_data_for_storage(raw_data)
+
+# ALWAYS sanitize before display
+from app.core.privacy import sanitize_data_for_display
+safe_data = sanitize_data_for_display(db_data)
+```
+
+## 🏗️ Critical Architecture Rules
+
+### Streamlit-First Design (NOT React)
+- **Direct UI**: This is a Streamlit app - use Streamlit components and patterns
 - **Session State**: Leverage `st.session_state` for user state, keep it minimal
 - **Caching**: Use `@st.cache_data` and `@st.cache_resource` for performance
+- **Native Patterns**: Embrace Streamlit paradigms, don't recreate React patterns
 
-### Privacy-by-Design
-- **Zero PII Storage**: Never store email, phone, address, salary in database or code
-- **Filter Everything**: All data flows through `app/core/privacy.py` sanitization
-- **Professional Only**: Only public professional data (names, titles, organizations, LinkedIn URLs)
+### Mandatory Folder Structure
+```
+app/core/          # Business logic, models, database (NO UI code here)
+app/services/      # Business services: import, search, analytics (NO UI code)
+app/ui/            # Streamlit pages and components (NO business logic here)
+app/api/           # Optional FastAPI endpoints (minimal usage)
+dev_workspace/     # Your experimentation space (gitignored)
+```
 
 ### Direct Database Pattern
-- **Supabase Direct**: Use Supabase client directly via `app/core/database.py`, not complex API layers
-- **Service Layer**: Business logic in `app/services/`, not in UI components
-- **Models**: Pydantic models in `app/core/models.py` for type safety
+- **Supabase Direct**: Use Supabase client directly via `app/core/database.py`
+- **No API Layers**: Avoid unnecessary complexity for simple CRUD operations  
+- **Service Layer**: All business logic in `app/services/`, not in UI components
+- **Type Safety**: Use Pydantic models in `app/core/models.py`
 
-## Essential File Structure
+## 🔄 Development Workflow & Patterns
+
+### Before Making Any Changes
+1. **Privacy Check**: Ensure no private data will be stored or displayed
+2. **Architecture Check**: Verify changes follow folder structure rules
+3. **Experiment First**: Use `dev_workspace/experiments/` for trying new approaches
+4. **Run Validation**: `python .ai_checks/check_privacy_compliance.py`
+
+### Required Data Flows
+
+**CSV Import Pipeline:**
 ```
-app/core/          # Data models, database, privacy filtering (NO UI code)
-app/services/      # Business services: import, search, analytics
-app/ui/            # Streamlit pages and components (NO business logic)  
-app/api/           # Optional FastAPI endpoints (minimal usage)
-dev_workspace/     # AI experimentation (gitignored)
+CSV → app/services/import_service.py → privacy filter → validate → database → audit log
 ```
 
-## Key Business Logic
+**Search & Display Pipeline:**  
+```
+User query → app/services/search_service.py → database → sanitize → UI components
+```
 
-### CSV Import Pipeline
-1. `app/services/import_service.py` - Main import logic
-2. `app/core/privacy.py` - Strips sensitive columns automatically
-3. Pattern: CSV → privacy filter → validate → database → audit log
-
-### Search Architecture  
-- `app/services/search_service.py` handles all search operations
-- Searches across people (by name, title) and organizations (by name, league, city)
-- Always sanitizes results before display via `sanitize_data_for_display()`
+**All data MUST flow through privacy filtering at every stage**
 
 ### Database Schema (Supabase)
-- `people`: Professional profiles (name, title, linkedin_url) 
-- `organizations`: Teams, leagues, agencies (name, league, city, state)
-- `roles`: Professional position history with temporal tracking
-- **Key**: No private data fields exist in schema
+- **people**: Professional profiles (name, title, linkedin_url, no private data)
+- **organizations**: Teams, leagues, agencies (name, league, city, state)  
+- **roles**: Professional position history with temporal tracking
+- **Critical**: No private data fields exist anywhere in schema
 
-## Development Workflow
+## 💻 Essential Code Patterns
 
-### Before Changes
-1. Check `.ai_reference/ai_constraints/PRIVACY_RULES.md` and `ARCHITECTURE_RULES.md`
-2. Experiment in `dev_workspace/experiments/` first
-3. Run: `python .ai_checks/check_privacy_compliance.py`
-
-### Making Changes
-- **UI Changes**: Modify `app/ui/pages/` or `app/ui/components/`
-- **Business Logic**: Add to `app/core/` or `app/services/`
-- **Database**: Use `app/core/database.py` methods only
-- **Testing**: `python run.py checks` validates everything
-
-## Common Patterns
-
-### Streamlit Caching
+### Streamlit Caching (Required for Performance)
 ```python
 @st.cache_resource
 def get_database_manager():
     return DatabaseManager()
 
-@st.cache_data(ttl=300)  # 5 minutes
+@st.cache_data(ttl=300)  # 5 minutes for dynamic data
 def search_people(query: str):
-    return db.search_people(query)
+    return get_search_service().search_people(query)
 ```
 
-### Privacy Filtering
+### Service Layer Usage (Required Pattern)
 ```python
-# Always filter before storage
-from app.core.privacy import sanitize_data_for_storage
-clean_data = sanitize_data_for_storage(raw_data)
-
-# Always sanitize before display  
-from app.core.privacy import sanitize_data_for_display
-safe_data = sanitize_data_for_display(db_data)
-```
-
-### Service Usage
-```python
-# Import CSV
+# CSV Import
 from app.services.import_service import get_import_service
 result = get_import_service().import_csv_file(file_content, filename)
 
-# Search operations
-from app.services.search_service import get_search_service  
+# Search Operations  
+from app.services.search_service import get_search_service
 results = get_search_service().search_all(query, limit=100)
+
+# Analytics
+from app.services.analytics_service import get_analytics_service
+stats = get_analytics_service().get_dashboard_stats()
 ```
 
-## Anti-Patterns to Avoid
-- ❌ Database queries in UI components - use services layer
-- ❌ Streamlit code in core/services - keep UI separate  
-- ❌ Bypassing privacy filters anywhere in codebase
-- ❌ Creating React-like patterns - embrace Streamlit paradigms
-- ❌ Storing any PII data - violates core architecture principle
+### UI Component Structure (Required Pattern)
+```python
+import streamlit as st
+from app.services.search_service import get_search_service
+from app.core.privacy import sanitize_data_for_display
 
-## Entry Points
-- `python run.py streamlit` - Start main application
-- `python run.py checks` - Run all validation including privacy compliance
+def render_search_page():
+    st.title("Professional Search")
+    
+    query = st.text_input("Search professionals...")
+    if query:
+        # Use service layer for business logic
+        results = get_search_service().search_people(query)
+        # Always sanitize before display
+        safe_results = sanitize_data_for_display(results)
+        
+        for person in safe_results:
+            st.write(f"{person.name} - {person.title}")
+```
+
+## ⚠️ Critical Anti-Patterns (NEVER DO)
+
+### Code Organization Violations
+- ❌ Database queries directly in UI components (use services layer)
+- ❌ Streamlit code in `app/core/` or `app/services/` (keep UI separate)
+- ❌ Business logic in UI files (belongs in core/services)
+- ❌ Bypassing the established folder structure
+
+### Privacy Violations  
+- ❌ Storing any PII data (violates core architecture principle)
+- ❌ Bypassing privacy filters anywhere in codebase
+- ❌ Creating database fields for private information
+- ❌ Displaying unfiltered data from database
+
+### Streamlit Anti-Patterns
+- ❌ Creating React-like patterns in Streamlit
+- ❌ Ignoring Streamlit caching opportunities
+- ❌ Complex state management (keep it simple)
+- ❌ Heavy computations in UI refresh cycles
+
+## 🎯 Target Users & Use Cases
+
+### Primary Users
+- **Sports Industry Professionals**: Mapping their professional networks
+- **Recruiters & Talent Scouts**: Finding talent and connections
+- **Journalists & Analysts**: Researching industry movements
+- **Business Development**: Identifying decision-makers and opportunities
+
+### Core Use Cases
+1. **Professional Discovery**: Find people by name, role, team, organization
+2. **Network Mapping**: Understand professional relationships and hierarchies
+3. **Industry Intelligence**: Track professional movements and trends
+4. **Talent Research**: Identify professionals with specific experience
+5. **Data Analytics**: Generate insights about sports industry networks
+
+## 🚀 Essential Commands & Validation
+
+### Development Commands
+```bash
+# Start application
+python run.py streamlit
+
+# Run all validation checks
+python run.py checks
+
+# Privacy compliance validation (run before any changes)
+python .ai_checks/check_privacy_compliance.py
+```
+
+### Entry Points
 - `app/main.py` - Main Streamlit application entry point
 - `app/core/database.py` - Single source for all database operations
+- `app/core/privacy.py` - All privacy filtering and sanitization
+- `dev_workspace/` - Your experimentation and debugging space
 
-## Performance Considerations
+## 🔍 Current System Status
+
+### Technology Stack
+- **Frontend**: Streamlit (Python web framework)
+- **Database**: Supabase (PostgreSQL with real-time features)
+- **Data Processing**: pandas, custom privacy filtering
+- **Visualization**: Streamlit native components, plotly for charts
+
+### Data Coverage
+- NFL professional network with comprehensive coverage
+- Professional profiles across teams, leagues, and organizations
+- Role history and career progression tracking
+- Zero private data storage (privacy-compliant architecture)
+
+### Performance Considerations
 - Use Streamlit caching for database calls and expensive computations
 - Paginate large result sets (default: 100 records)
 - Database queries go through `DatabaseManager.safe_query()` with error handling
 - CSV imports process in batches via `ImportService`
 
-This codebase prioritizes simplicity, privacy compliance, and Streamlit-native patterns. When in doubt, choose the more privacy-protective option and follow existing service layer patterns rather than creating new architectural approaches.
+## 💡 Success Principles
+
+**When in doubt:**
+1. **Choose privacy-protective option** - err on the side of privacy
+2. **Follow existing service layer patterns** - don't create new architecture  
+3. **Keep it simple** - Streamlit works best with simple, direct patterns
+4. **Test privacy compliance** - validate before committing any changes
+
+This codebase prioritizes **simplicity**, **privacy compliance**, and **Streamlit-native patterns** above all else. The goal is professional networking without compromising personal privacy.
+
+````

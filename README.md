@@ -19,7 +19,7 @@ Visit http://localhost:8502
 ## 📚 Documentation
 
 - **[📖 Documentation Hub](docs/README.md)** - Complete documentation
-- **[🤖 AI Development Guide](AI_AGENT_README.md)** - For AI coding agents
+- **[🤖 AI Development Guide](.github/copilot-instructions.md)** - For AI coding agents
 - **[🔒 Privacy & Compliance](docs/user-guide/overview.md)** - User guide and privacy
 
 ## 🎯 What We Track ✅ / Don't Store ❌

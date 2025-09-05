@@ -11,7 +11,7 @@ This `/docs` directory contains the centralized, authoritative documentation for
 - **[Privacy & Compliance](#privacy--compliance)** - Privacy-first principles
 
 ### **For AI Coding Agents**
-- **[AI Development Guide](../AI_AGENT_README.md)** - Comprehensive AI agent instructions
+- **[AI Development Guide](../.github/copilot-instructions.md)** - Comprehensive AI agent instructions
 - **[GitHub Copilot Instructions](../.github/copilot-instructions.md)** - Quick AI guidance
 - **[AI Reference Hub](../.ai_reference/README.md)** - Complete AI development reference
 - **[Privacy Rules](../.ai_reference/ai_constraints/PRIVACY_RULES.md)** - Non-negotiable privacy requirements
@@ -97,7 +97,7 @@ python run.py streamlit   # Start application (http://localhost:8502)
 
 ## 🆘 Need Help?
 
-1. **AI Development**: See [AI Development Guide](../AI_AGENT_README.md)
+1. **AI Development**: See [AI Development Guide](../.github/copilot-instructions.md)
 2. **Issues**: Check [Troubleshooting](maintenance/troubleshooting.md)
 3. **Architecture**: Review [System Architecture](architecture/overview.md)
 4. **Privacy Questions**: See [Privacy & Compliance](#privacy--compliance) above

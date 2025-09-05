@@ -260,7 +260,7 @@ print(f'Roles: {stats.total_roles}')
 - **[User Guide](../user-guide/overview.md)** - Application usage
 
 ### Development Resources
-- **[AI Development Guide](../../AI_AGENT_README.md)** - For AI coding agents
+- **[AI Development Guide](../../.github/copilot-instructions.md)** - For AI coding agents
 - **[GitHub Repository](https://github.com/tinusleroux/crowdbiz_graph)** - Source code and issues
 
 ### Escalation Process
