@@ -1,220 +1,239 @@
 ````instructions
 # GitHub Copilot Instructions for CrowdBiz Graph
 
-## 🎯 Project Mission
-CrowdBiz Graph is a **privacy-first sports industry professional network** that maps NFL professionals across teams without storing private contact data. We connect professionals through public information only - no emails, phones, or addresses ever stored.
+## 🎯 Project Overview
+CrowdBiz Graph is a **Streamlit application** that maps NFL professionals across teams and organizations. Built with **Supabase PostgreSQL** for data persistence and **privacy-filtered imports** for data quality.
 
-**Core Purpose**: Enable meaningful professional connections while respecting privacy completely.
+## 🔧 Technical Architecture
 
-## 🚨 CRITICAL PRIVACY RULES - NEVER VIOLATE
+### Core Stack
+- **Frontend**: Streamlit (Python web framework)
+- **Database**: Supabase (PostgreSQL with REST API)
+- **Data Processing**: pandas, privacy filtering
+- **Authentication**: Supabase Auth (optional)
 
-### ❌ Forbidden Data (Zero Tolerance)
-- **NEVER store**: email, phone, address, salary, personal_notes, private_contact_info
-- **NEVER accept**: private contact information during imports
-- **NEVER create**: database fields that could store private data  
-- **NEVER display**: private information even if it exists in source data
-- **NEVER bypass**: privacy filtering anywhere in the codebase
+### Folder Structure
+```
+app/core/          # Database, models, config, privacy (NO UI code)
+app/services/      # Business logic: import, search, analytics
+app/ui/            # Streamlit pages and components  
+app/api/           # Optional FastAPI endpoints
+dev_workspace/     # Experimentation space (gitignored)
+```
 
-### ✅ Allowed Professional Data Only
-- Names, titles, organizations, industry roles
-- Professional work history and achievements
-- Public social media profiles (LinkedIn URLs)
-- Professional skills and expertise areas
-- Team affiliations and professional networks
+## 🏗️ Database Connection & Schema
 
-### 🛡️ Required Privacy Patterns
+### Supabase Credentials Setup
 ```python
-# ALWAYS filter before storage
-from app.core.privacy import sanitize_data_for_storage
-clean_data = sanitize_data_for_storage(raw_data)
-
-# ALWAYS sanitize before display
-from app.core.privacy import sanitize_data_for_display
-safe_data = sanitize_data_for_display(db_data)
+# Located in app/core/config.py
+# Environment variables needed:
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_API_KEY=your-anon-public-key
+SUPABASE_PERSONAL_ACCESS_TOKEN=optional-for-admin
+SUPABASE_DATABASE_PASSWORD=optional-for-direct-sql
 ```
 
-## 🏗️ Critical Architecture Rules
+### Core Database Schema
+```sql
+-- Primary tables
+person (id, full_name, first_name, last_name, linkedin_url, created_at, updated_at)
+organization (id, name, org_type, sport, parent_org_id) 
+role (id, person_id, org_id, job_title, dept, start_date, end_date, source_id)
+source (id, url, license, confidence, fetched_at, checksum_sha256)
 
-### Streamlit-First Design (NOT React)
-- **Direct UI**: This is a Streamlit app - use Streamlit components and patterns
-- **Session State**: Leverage `st.session_state` for user state, keep it minimal
-- **Caching**: Use `@st.cache_data` and `@st.cache_resource` for performance
-- **Native Patterns**: Embrace Streamlit paradigms, don't recreate React patterns
-
-### Mandatory Folder Structure
-```
-app/core/          # Business logic, models, database (NO UI code here)
-app/services/      # Business services: import, search, analytics (NO UI code)
-app/ui/            # Streamlit pages and components (NO business logic here)
-app/api/           # Optional FastAPI endpoints (minimal usage)
-dev_workspace/     # Your experimentation space (gitignored)
+-- Materialized view for current roles
+v_role_current (id, person_id, org_id, job_title, dept, start_date)
 ```
 
-### Direct Database Pattern
-- **Supabase Direct**: Use Supabase client directly via `app/core/database.py`
-- **No API Layers**: Avoid unnecessary complexity for simple CRUD operations  
-- **Service Layer**: All business logic in `app/services/`, not in UI components
-- **Type Safety**: Use Pydantic models in `app/core/models.py`
-
-## 🔄 Development Workflow & Patterns
-
-### Before Making Any Changes
-1. **Privacy Check**: Ensure no private data will be stored or displayed
-2. **Architecture Check**: Verify changes follow folder structure rules
-3. **Experiment First**: Use `dev_workspace/experiments/` for trying new approaches
-4. **Run Validation**: `python .ai_checks/check_privacy_compliance.py`
-
-### Required Data Flows
-
-**CSV Import Pipeline:**
-```
-CSV → app/services/import_service.py → privacy filter → validate → database → audit log
-```
-
-**Search & Display Pipeline:**  
-```
-User query → app/services/search_service.py → database → sanitize → UI components
-```
-
-**All data MUST flow through privacy filtering at every stage**
-
-### Database Schema (Supabase)
-- **people**: Professional profiles (name, title, linkedin_url, no private data)
-- **organizations**: Teams, leagues, agencies (name, league, city, state)  
-- **roles**: Professional position history with temporal tracking
-- **Critical**: No private data fields exist anywhere in schema
-
-## 💻 Essential Code Patterns
-
-### Streamlit Caching (Required for Performance)
+### Database Connection Pattern
 ```python
-@st.cache_resource
+from app.core.database import get_database_manager
+
+@st.cache_resource  # Cache database connection
+def get_db():
+    return get_database_manager()
+
+# Usage in functions
+db = get_db()
+results = db.safe_query("person", "select", 
+                       filters={"full_name": search_term},
+                       limit=100)
+```
+
+## 💾 Data Quality & Integrity
+
+### Historical Data Preservation
+```python
+# Roles table maintains history - never delete, only close
+def update_person_role(person_id, org_id, new_title):
+    # Close current role
+    db.safe_query("role", "update", 
+                  data={"end_date": datetime.now().date()},
+                  filters={"person_id": person_id, "org_id": org_id, "end_date": None})
+    
+    # Create new role entry
+    db.safe_query("role", "insert", 
+                  data={"person_id": person_id, "org_id": org_id, 
+                        "job_title": new_title, "start_date": datetime.now().date()})
+```
+
+### Data Validation Patterns
+```python
+# Always validate before insert/update
+from app.core.models import validate_import_data
+
+def import_csv_data(records):
+    # Clean and validate
+    valid_records, errors = validate_import_data(records)
+    
+    # Use unique constraints to prevent duplicates
+    for record in valid_records:
+        # Upsert pattern - update if exists, insert if new
+        existing = db.safe_query("person", "select", 
+                                filters={"email": record.get("email")})
+        
+        if existing:
+            db.safe_query("person", "update", 
+                         data=record, filters={"id": existing[0]["id"]})
+        else:
+            db.safe_query("person", "insert", data=record)
+```
+
+## 🔍 Search & Query Patterns
+
+### Efficient Search Implementation
+```python
+@st.cache_data(ttl=300)  # Cache search results for 5 minutes
+def search_professionals(query: str, limit: int = 100):
+    # Use text search index
+    return db.safe_query("person", "select",
+                        filters={"full_name": query},
+                        limit=limit,
+                        order_by="full_name")
+
+# Join queries for relationships
+def get_person_with_roles(person_id: str):
+    # Use service layer for complex queries
+    from app.services.search_service import get_search_service
+    return get_search_service().get_person_details(person_id)
+```
+
+## 📊 Streamlit Performance Optimization
+
+### Required Caching Patterns
+```python
+@st.cache_resource  # For connections, singletons
 def get_database_manager():
     return DatabaseManager()
 
-@st.cache_data(ttl=300)  # 5 minutes for dynamic data
-def search_people(query: str):
-    return get_search_service().search_people(query)
+@st.cache_data(ttl=600)  # For data that changes slowly
+def get_dashboard_stats():
+    return {
+        "total_people": db.safe_query("person", "count"),
+        "total_orgs": db.safe_query("organization", "count")
+    }
+
+@st.cache_data(ttl=60)   # For frequently changing data
+def get_recent_imports():
+    return db.safe_query("source", "select", limit=10, order_by="fetched_at desc")
 ```
 
-### Service Layer Usage (Required Pattern)
+### Session State Management
 ```python
-# CSV Import
-from app.services.import_service import get_import_service
-result = get_import_service().import_csv_file(file_content, filename)
-
-# Search Operations  
-from app.services.search_service import get_search_service
-results = get_search_service().search_all(query, limit=100)
-
-# Analytics
-from app.services.analytics_service import get_analytics_service
-stats = get_analytics_service().get_dashboard_stats()
-```
-
-### UI Component Structure (Required Pattern)
-```python
-import streamlit as st
-from app.services.search_service import get_search_service
-from app.core.privacy import sanitize_data_for_display
-
-def render_search_page():
-    st.title("Professional Search")
+# Initialize session state
+if 'search_results' not in st.session_state:
+    st.session_state.search_results = []
     
-    query = st.text_input("Search professionals...")
-    if query:
-        # Use service layer for business logic
-        results = get_search_service().search_people(query)
-        # Always sanitize before display
-        safe_results = sanitize_data_for_display(results)
-        
-        for person in safe_results:
-            st.write(f"{person.name} - {person.title}")
+# Update state efficiently
+if st.button("Search"):
+    st.session_state.search_results = search_professionals(query)
+    st.rerun()  # Trigger re-render
 ```
 
-## ⚠️ Critical Anti-Patterns (NEVER DO)
+## 🔄 CSV Import & Data Processing
 
-### Code Organization Violations
-- ❌ Database queries directly in UI components (use services layer)
-- ❌ Streamlit code in `app/core/` or `app/services/` (keep UI separate)
-- ❌ Business logic in UI files (belongs in core/services)
-- ❌ Bypassing the established folder structure
+### Service Layer Pattern
+```python
+from app.services.import_service import get_import_service
 
-### Privacy Violations  
-- ❌ Storing any PII data (violates core architecture principle)
-- ❌ Bypassing privacy filters anywhere in codebase
-- ❌ Creating database fields for private information
-- ❌ Displaying unfiltered data from database
+def handle_file_upload(uploaded_file):
+    if uploaded_file:
+        # Use service layer for business logic
+        result = get_import_service().import_csv_file(
+            uploaded_file.getvalue(), 
+            uploaded_file.name
+        )
+        
+        # Display results in UI
+        st.success(f"Imported {result.imported_count} records")
+        if result.errors:
+            st.error(f"Errors: {result.errors}")
+```
 
-### Streamlit Anti-Patterns
-- ❌ Creating React-like patterns in Streamlit
-- ❌ Ignoring Streamlit caching opportunities
-- ❌ Complex state management (keep it simple)
-- ❌ Heavy computations in UI refresh cycles
+### Data Pipeline Flow
+```
+1. CSV Upload → pandas DataFrame
+2. Privacy Filter → Remove sensitive columns automatically  
+3. Data Validation → Check required fields, formats
+4. Deduplication → Use unique constraints (email, linkedin_url)
+5. Historical Updates → Close old roles, create new ones
+6. Database Insert → Batch processing for performance
+7. Audit Logging → Track source and import metadata
+```
 
-## 🎯 Target Users & Use Cases
+## 🏃‍♂️ Common Development Tasks
 
-### Primary Users
-- **Sports Industry Professionals**: Mapping their professional networks
-- **Recruiters & Talent Scouts**: Finding talent and connections
-- **Journalists & Analysts**: Researching industry movements
-- **Business Development**: Identifying decision-makers and opportunities
+### Adding New Search Features
+1. Add method to `app/services/search_service.py`
+2. Add caching with appropriate TTL
+3. Create UI component in `app/ui/components/`
+4. Use component in page in `app/ui/pages/`
 
-### Core Use Cases
-1. **Professional Discovery**: Find people by name, role, team, organization
-2. **Network Mapping**: Understand professional relationships and hierarchies
-3. **Industry Intelligence**: Track professional movements and trends
-4. **Talent Research**: Identify professionals with specific experience
-5. **Data Analytics**: Generate insights about sports industry networks
+### Database Schema Changes
+1. Create migration in `supabase/migrations/`
+2. Update models in `app/core/models.py`
+3. Update service methods that use affected tables
+4. Test with existing data
 
-## 🚀 Essential Commands & Validation
+### Performance Debugging
+```python
+# Check query performance
+import time
+start = time.time()
+results = db.safe_query("person", "select", limit=1000)
+logger.info(f"Query took {time.time() - start:.2f}s")
 
-### Development Commands
+# Monitor Streamlit performance
+with st.spinner("Loading data..."):
+    data = expensive_operation()
+```
+
+## 🚀 Essential Commands
+
 ```bash
 # Start application
 python run.py streamlit
 
-# Run all validation checks
+# Run validation checks  
 python run.py checks
 
-# Privacy compliance validation (run before any changes)
-python .ai_checks/check_privacy_compliance.py
+# Database migrations (if using Supabase CLI)
+supabase db push
+
+# Environment setup
+cp .env.example .env  # Add your Supabase credentials
 ```
 
-### Entry Points
-- `app/main.py` - Main Streamlit application entry point
-- `app/core/database.py` - Single source for all database operations
-- `app/core/privacy.py` - All privacy filtering and sanitization
-- `dev_workspace/` - Your experimentation and debugging space
+## 🎯 Key Success Patterns
 
-## 🔍 Current System Status
+1. **Use Service Layer**: Keep business logic in `app/services/`, not UI components
+2. **Cache Aggressively**: Use `@st.cache_data` and `@st.cache_resource` everywhere
+3. **Preserve History**: Never delete roles, always create new records with timestamps  
+4. **Validate Data**: Use unique constraints and validation before database operations
+5. **Handle Errors Gracefully**: Use `db.safe_query()` pattern for error handling
 
-### Technology Stack
-- **Frontend**: Streamlit (Python web framework)
-- **Database**: Supabase (PostgreSQL with real-time features)
-- **Data Processing**: pandas, custom privacy filtering
-- **Visualization**: Streamlit native components, plotly for charts
+The system is optimized for **data quality**, **historical preservation**, and **Streamlit performance**. Focus on practical implementation over theoretical architecture.
 
-### Data Coverage
-- NFL professional network with comprehensive coverage
-- Professional profiles across teams, leagues, and organizations
-- Role history and career progression tracking
-- Zero private data storage (privacy-compliant architecture)
-
-### Performance Considerations
-- Use Streamlit caching for database calls and expensive computations
-- Paginate large result sets (default: 100 records)
-- Database queries go through `DatabaseManager.safe_query()` with error handling
-- CSV imports process in batches via `ImportService`
-
-## 💡 Success Principles
-
-**When in doubt:**
-1. **Choose privacy-protective option** - err on the side of privacy
-2. **Follow existing service layer patterns** - don't create new architecture  
-3. **Keep it simple** - Streamlit works best with simple, direct patterns
-4. **Test privacy compliance** - validate before committing any changes
-
-This codebase prioritizes **simplicity**, **privacy compliance**, and **Streamlit-native patterns** above all else. The goal is professional networking without compromising personal privacy.
+````
 
 ````
