@@ -165,9 +165,9 @@ class CrowdBizLogger:
         """Log warning message"""
         self.logger.warning(message)
     
-    def error(self, message: str):
+    def error(self, message: str, exc_info=False):
         """Log error message"""
-        self.logger.error(message)
+        self.logger.error(message, exc_info=exc_info)
     
     def _save_metrics_to_file(self, metrics: ImportMetrics):
         """Save metrics to JSON file"""

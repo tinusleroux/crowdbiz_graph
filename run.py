@@ -17,6 +17,7 @@ Usage: python run.py [command]
 Commands:
   streamlit     Start the Streamlit web application
   api          Start the FastAPI service (optional)
+  refresh      Refresh the database summary tables
   checks       Run all validation and compliance checks
   tests        Run the test suite
   setup        Initial setup and configuration
@@ -24,6 +25,7 @@ Commands:
 
 Examples:
   python run.py streamlit    # Start the main application
+  python run.py refresh     # Update summary tables for the UI
   python run.py checks      # Validate privacy compliance and code quality
   python run.py tests       # Run all tests
 """)
@@ -46,6 +48,12 @@ def main():
         elif command == "api":
             # Start the optional FastAPI service
             subprocess.run(["python", "app/api/main.py"])
+            
+        elif command == "refresh":
+            # Refresh the summary tables
+            print("🔄 Refreshing summary tables...")
+            subprocess.run(["python", "refresh_summary_tables.py"])
+            print("✅ Summary tables refreshed successfully.")
             
         elif command == "checks":
             # Run all validation checks
